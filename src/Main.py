@@ -19,6 +19,9 @@ class Player:
         self.isAttacking = False
         self.attackController = 0
 
+        #sound configuration
+        self.soundControllerRun = 0
+
         # Carregar sprites
         self.runImages = {
             "right": ["samurai_right_run1", "samurai_right_run2", "samurai_right_run3", "samurai_right_run4", "samurai_right_run5", "samurai_right_run6", "samurai_right_run7"],
@@ -60,7 +63,16 @@ class Player:
             else:
                 self.current_frame %= len(self.currentImages)
                 self.player.image = self.currentImages[self.current_frame]
+            
+        self.soundRun()
                 
+    def soundRun(self):
+        if self.isWalking:
+            self.soundControllerRun += 1
+            if self.soundControllerRun >= 15:
+                self.soundControllerRun = 0
+                sounds.player_step.play()
+
 
     def attack(self):
         if not self.isAttacking:
@@ -68,7 +80,7 @@ class Player:
             self.current_frame = 0
             self.currentImages = self.attackImages[self.direction]
             self.animation_speed = 3  # Ajuste para melhor tempo de animação
-            print("Atacando!")
+            sounds.knife_slice.play()
 
     def draw(self):
         self.player.draw()
