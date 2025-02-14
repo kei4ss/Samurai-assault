@@ -8,7 +8,7 @@ HEIGHT = 324
 # === Characters classes ===
 class Player:
     def __init__(self):
-        # general configs
+        # Configurações gerais
         self.velocity = 3
         self.direction = "right"
         self.spriteSize = (60, 73)
@@ -16,48 +16,76 @@ class Player:
         self.animation_speed_to_idle = 8
         self.animation_speed_to_run = 4
         self.isWalking = False
+        self.isAttacking = False
+        self.attackController = 0
 
-        # load sprites
+        # Carregar sprites
         self.runImages = {
             "right": ["samurai_right_run1", "samurai_right_run2", "samurai_right_run3", "samurai_right_run4", "samurai_right_run5", "samurai_right_run6", "samurai_right_run7"],
-            "left": ["samurai_left_run1", "samurai_left_run2", "samurai_left_run3", "samurai_left_run4", "samurai_left_run5", "samurai_left_run6", "samurai_left_run7"]}
+            "left": ["samurai_left_run1", "samurai_left_run2", "samurai_left_run3", "samurai_left_run4", "samurai_left_run5", "samurai_left_run6", "samurai_left_run7"]
+        }
+        
         self.idleImages = {
             "right": ["samurai_right_idle1", "samurai_right_idle2", "samurai_right_idle3", "samurai_right_idle4", "samurai_right_idle5"],
-            "left": ["samurai_left_idle1", "samurai_left_idle2", "samurai_left_idle3", "samurai_left_idle4", "samurai_left_idle5"]}
-        
-        # sprite settings
+            "left": ["samurai_left_idle1", "samurai_left_idle2", "samurai_left_idle3", "samurai_left_idle4", "samurai_left_idle5"]
+        }
+
+        self.attackImages = {
+            "right": ["samurai_right_attack_1", "samurai_right_attack_2", "samurai_right_attack_3", "samurai_right_attack_4"],
+            "left": ["samurai_left_attack_1", "samurai_left_attack_2", "samurai_left_attack_3", "samurai_left_attack_4"]
+        }
+
+        # Configuração de animação
         self.currentImages = self.idleImages[self.direction]
         self.current_frame = 0
+        self.frame_count = 0  
+        self.animation_speed = 10  
 
-        # fps image animation
-        self.frame_count = 0  # Contador para controlar a troca
-        self.animation_speed = 10  # Quantos frames do jogo para trocar de imagem
-
-        # Setting Actor object
+        # Criando Actor
         self.player = Actor(self.currentImages[self.current_frame], self.spriteSize)
         self.player.topleft = self.initialPos
 
     def update(self):
         self.frame_count += 1
         if self.frame_count >= self.animation_speed:
-            self.frame_count = 0  # Reseta o contador
-            self.current_frame = (self.current_frame + 1) % len(self.currentImages)  # Avança para o próximo frame
-            self.player.image = self.currentImages[self.current_frame]  # Muda a imagem
+            self.frame_count = 0
+            self.current_frame += 1
+
+            if self.isAttacking:
+                if self.current_frame >= len(self.currentImages):  
+                    self.isAttacking = False
+                    self.toIdle()
+                else:
+                    self.player.image = self.currentImages[self.current_frame]
+            else:
+                self.current_frame %= len(self.currentImages)
+                self.player.image = self.currentImages[self.current_frame]
+                
+
+    def attack(self):
+        if not self.isAttacking:
+            self.isAttacking = True
+            self.current_frame = 0
+            self.currentImages = self.attackImages[self.direction]
+            self.animation_speed = 3  # Ajuste para melhor tempo de animação
+            print("Atacando!")
 
     def draw(self):
         self.player.draw()
 
     def moveRight(self):
-        self.direction = "right"
-        self.toRun()
-        if self.player.right < WIDTH:  # Impede que o personagem ultrapasse a borda direita
-            self.player.left += self.velocity
+        if not self.isAttacking:  # Impede movimento durante ataque
+            self.direction = "right"
+            self.toRun()
+            if self.player.right < (WIDTH - self.spriteSize[0]/2):
+                self.player.left += self.velocity
     
     def moveLeft(self):
-        self.direction = "left"
-        self.toRun()
-        if self.player.left > 0: # Impede que o personagem ultrapasse a borda esquerda
-            self.player.left -= self.velocity
+        if not self.isAttacking:
+            self.direction = "left"
+            self.toRun()
+            if self.player.left > self.spriteSize[0]/2:
+                self.player.left -= self.velocity
     
     def toIdle(self):
         self.isWalking = False
@@ -70,14 +98,15 @@ class Player:
         self.currentImages = self.runImages[self.direction]
 
     def goingToLeft(self):
-        if(self.player.left < 10 and self.isWalking and self.direction == "left"):
+        if(self.player.left < (self.spriteSize[0]/2 + 5) and self.isWalking and self.direction == "left"):
             return True
         return False
     
     def goingToRight(self):
-        if(self.player.right > WIDTH - 10 and self.isWalking and self.direction == "right"):
+        if(self.player.right > (WIDTH - self.spriteSize[0]/2 - 5) and self.isWalking and self.direction == "right"):
             return True
         return False
+    
 
 class Cloud:
     def __init__(self):
@@ -189,6 +218,7 @@ class Scene:
         screen.blit(self.mountains, (0,0))
         screen.blit(self.layer, (0, 0))
         self.groundManage()
+        self.player.draw()
 
 player = Player()
 scene = Scene(player)
@@ -206,11 +236,15 @@ def update():
 def draw():
     screen.clear()
     scene.showScene()
-    player.draw()
+    #player.draw()
 
 def on_key_up(key):
     if key == keys.D or key == keys.A:
         player.toIdle()
+
+def on_key_down(key):
+    if key == keys.E:
+        player.attack()
 
 # run code
 pg.go()
