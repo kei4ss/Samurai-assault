@@ -222,6 +222,10 @@ class Scene:
         if(self.cloudTick > 120):
             self.cloudTick = 0
             self.clouds.append(Cloud()) if randint(0, 1) == 1 and len(self.clouds) < 5 else ...
+    
+    def playbackgroundMusic(self):
+        if not music.is_playing("danger"):
+            music.play("danger")
             
     def showScene(self):
         screen.blit(self.sky, (0, 0))
@@ -230,9 +234,11 @@ class Scene:
         screen.blit(self.layer, (0, 0))
         self.groundManage()
         self.player.draw()
+        self.playbackgroundMusic()
 
 player = Player()
 scene = Scene(player)
+
 
 def update():
     #Player animation
@@ -247,7 +253,7 @@ def update():
 def draw():
     screen.clear()
     scene.showScene()
-    #player.draw()
+
 
 def on_key_up(key):
     if key == keys.D or key == keys.A:
