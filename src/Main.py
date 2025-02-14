@@ -105,8 +105,7 @@ class Player:
     def goingToRight(self):
         if(self.player.right > (WIDTH - self.spriteSize[0]/2 - 5) and self.isWalking and self.direction == "right"):
             return True
-        return False
-    
+        return False   
 
 class Cloud:
     def __init__(self):

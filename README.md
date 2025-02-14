@@ -1,6 +1,8 @@
 # Samurai assault
 A pgzero game
 
+![gameImage](documents/gameScreenshot.png)
+
 ## How to play?
 ### 1️⃣ Install python
 Check if you have python installed on your machine. (version 3.7 or higher)
@@ -39,32 +41,4 @@ python3 Main.py
 or
 ```bash
 pgzrun Main.py
-```
-
-
-## class diagram
-```mermaid
-classDiagram
-    class Player {
-        - int velocity
-        - str direction
-        - tuple spriteSize
-        - tuple initialPos
-        - int animation_speed_to_idle
-        - int animation_speed_to_run
-        - dict runImages
-        - dict idleImages
-        - list currentImages
-        - int current_frame
-        - int frame_count
-        - int animation_speed
-        - Actor player
-        + Player()
-        + update()
-        + draw()
-        + moveRight()
-        + moveLeft()
-        + toIdle()
-        + toRun()
-    }
 ```
