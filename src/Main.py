@@ -1,5 +1,7 @@
 import pgzrun as pg
+from pgzero.actor import Actor
 from random import randint
+from random import choice
 
 # === Setting the width and height of the window ===
 WIDTH = 576
@@ -174,6 +176,8 @@ class Scene:
         self.mountains = "mountains"
         self.layer = "layer"
 
+        self.btnHome = Button("gui_btn_home", (25, 25), (WIDTH-25, 0))
+
     def groundManage(self):
         for ground in self.grounds:
             ground.LeftOutTheScreen()
@@ -222,10 +226,6 @@ class Scene:
         if(self.cloudTick > 120):
             self.cloudTick = 0
             self.clouds.append(Cloud()) if randint(0, 1) == 1 and len(self.clouds) < 5 else ...
-    
-    def playbackgroundMusic(self):
-        if not music.is_playing("danger"):
-            music.play("danger")
             
     def showScene(self):
         screen.blit(self.sky, (0, 0))
@@ -234,34 +234,170 @@ class Scene:
         screen.blit(self.layer, (0, 0))
         self.groundManage()
         self.player.draw()
-        self.playbackgroundMusic()
+        self.btnHome.draw()
+    
+    def update(self, x, y):
+        self.btnHome.buttonSelected(x, y)
+    
+    def checkClick(self, x, y):
+        global gameStart
+        global musicManager
+        if self.btnHome.buttonCollid(x,y):
+            musicManager.play()
+            gameStart = False
+
+class Button:
+    def __init__(self, image:str, dimentions:tuple, pos:tuple, imagePressed:str=""):
+        self.x = pos[0]
+        self.y = pos[1]
+        self.width = dimentions[0]
+        self.height = dimentions[1]
+
+        self.defaultImage = image
+        if imagePressed != "":
+            self.pressedImage = imagePressed
+        else:
+            self.pressedImage = image
+
+        self.button = Actor(image, topleft=pos)
+
+    def draw(self):
+        self.button.draw()
+    
+    def buttonCollid(self, x:int, y:int):
+        if self.x <= x <= self.x+self.width and self.y <= y <= self.y+self.height:
+            return True
+        return False
+    
+    def buttonSelected(self, x:int, y:int):
+        if self.buttonCollid(x, y):
+            self.button.image = self.pressedImage
+        else:
+            self.button.image = self.defaultImage
+    
+    def setImage(self, image):
+        self.button.image = image
+
+class Menu:
+    def __init__(self):
+        self.startButton = Button("gui_btn_play", (50, 50), (WIDTH/2-25, 200), "gui_btn_play_pressed")
+        self.musicButton = Button("gui_btn_music", (40, 40), (WIDTH-40, HEIGHT-40))
+    
+    def startGame(self):
+        global gameStart
+        gameStart = True
+
+    def checkClick(self, x, y):
+        global musicManager
+        if self.startButton.buttonCollid(x, y):
+            self.startGame()
+            musicManager.play()
+        if self.musicButton.buttonCollid(x, y):
+            if musicManager.mutted:
+                musicManager.removeMutted()
+                self.musicButton.setImage("gui_btn_music")
+            else:
+                musicManager.activeMutted()
+                self.musicButton.setImage("gui_btn_music_mutted")
+
+
+    def draw(self):
+        screen.fill("white")
+        screen.blit("background_static", (0,0))
+        screen.blit("gui_txt_controllers", (10, 20))
+        screen.blit("gui_txt_move", (20, 50))
+        screen.blit("gui_decoration_btna", (80, 45))
+        screen.blit("gui_decoration_btnd", (100, 45))
+        screen.blit("gui_txt_attack", (20, 75))
+        screen.blit("gui_decoration_btne", (90, 70))
+        screen.blit("gui_logo", (155, 120))
+        self.startButton.draw()
+        self.musicButton.draw()
+    
+    def update(self, x, y):
+        self.startButton.buttonSelected(x, y)
+
+class MusicManager:
+    def __init__(self):
+        self.musics = ["danger", "rebels_be"]
+        self.mutted = False
+        self.currentMusic = self.choiceRandomMusic()
+        self.play()
+
+    def play(self):
+        if not self.mutted:
+            self.currentMusic = self.choiceRandomMusic()
+            music.stop()
+            music.play_once(self.currentMusic)
+    
+    def choiceRandomMusic(self):
+        return choice(self.musics)
+    
+    def update(self):
+        if not music.is_playing(self.currentMusic):
+            self.play()
+        
+    def activeMutted(self):
+        music.stop()
+        self.mutted = True
+
+    def removeMutted(self):
+        self.mutted = False
+        self.play()
+        
+
 
 player = Player()
 scene = Scene(player)
+menu = Menu()
+gameStart = False
+musicManager = MusicManager()
 
 
 def update():
-    #Player animation
-    player.update()
+    if gameStart:
+        #Player animation
+        player.update()
 
-    #Player moviment
-    if keyboard.D:
-        player.moveRight()
-    elif keyboard.A:
-        player.moveLeft()
+        #Player moviment
+        if keyboard.D:
+            player.moveRight()
+        elif keyboard.A:
+            player.moveLeft()
+    
+    musicManager.update()
 
 def draw():
     screen.clear()
-    scene.showScene()
-
+    if gameStart:
+        scene.showScene()
+    else:
+        menu.draw()
 
 def on_key_up(key):
-    if key == keys.D or key == keys.A:
-        player.toIdle()
+    if gameStart:
+        if key == keys.D or key == keys.A:
+            player.toIdle()
 
 def on_key_down(key):
-    if key == keys.E:
-        player.attack()
+    if gameStart:
+        if key == keys.E:
+            player.attack()
+
+def on_mouse_down(pos):
+    x,y = pos
+    if not gameStart:
+        menu.checkClick(x, y)
+    else:
+        scene.checkClick(x,y)
+    
+def on_mouse_move(pos):
+    x, y = pos
+    if not gameStart:
+        menu.update(x, y)
+    else:
+        scene.update(x,y)
+    
 
 # run code
 pg.go()
