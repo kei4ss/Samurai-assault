@@ -17,6 +17,7 @@ class Player:
         self.initialPos = (int(WIDTH/2 - self.spriteSize[0]/2), int(HEIGHT - self.spriteSize[1]*1.5))
         self.animation_speed_to_idle = 8
         self.animation_speed_to_run = 4
+        self.animation_speed_to_attack = 3
         self.isWalking = False
         self.isAttacking = False
         self.attackController = 0
@@ -59,6 +60,8 @@ class Player:
             if self.isAttacking:
                 if self.current_frame >= len(self.currentImages):  
                     self.isAttacking = False
+                    self.current_frame = 0
+                    self.frame_count = 0
                     self.toIdle()
                 else:
                     self.player.image = self.currentImages[self.current_frame]
@@ -80,8 +83,9 @@ class Player:
         if not self.isAttacking:
             self.isAttacking = True
             self.current_frame = 0
+            self.frame_count = 0
+            self.animation_speed = self.animation_speed_to_attack
             self.currentImages = self.attackImages[self.direction]
-            self.animation_speed = 3  # Ajuste para melhor tempo de animação
             sounds.knife_slice.play()
 
     def draw(self):
@@ -120,6 +124,64 @@ class Player:
         if(self.player.right > (WIDTH - self.spriteSize[0]/2 - 5) and self.isWalking and self.direction == "right"):
             return True
         return False   
+    
+    def getPosX(self):
+        return self.player.x + self.spriteSize[0]//2
+
+class Monster:
+    def __init__(self, x:int, y:int):
+        self.direction = "right"
+        self.posx = x
+        self.posy = y
+        self.velocity = 1
+        self.dimension = (32, 32)
+
+        self.imageRun = {
+            "right": ["monster_white_run_right_1", "monster_white_run_right_2", "monster_white_run_right_3", "monster_white_run_right_4", "monster_white_run_right_5", "monster_white_run_right_6"],
+            "left": ["monster_white_run_left_1", "monster_white_run_left_2", "monster_white_run_left_3", "monster_white_run_left_4", "monster_white_run_left_5", "monster_white_run_left_6"]
+        }
+
+        self.currentImages = self.imageRun[self.direction]
+        self.current_frame = 0
+        self.frame_count = 0  
+        self.animation_speed = 10  
+
+
+        self.monster = Actor(self.currentImages[self.current_frame], topleft=(self.posx, self.posy))
+
+    def update(self, playerX):
+        self.checkDirection(playerX)
+        self.moviment()
+        self.animation()
+
+    def draw(self):
+        self.monster.draw()
+    
+    def animation(self):
+        self.frame_count += 1
+        if self.frame_count >= self.animation_speed:
+            self.frame_count = 0
+            self.current_frame += 1
+            self.current_frame %= len(self.currentImages)
+            self.monster.image = self.currentImages[self.current_frame]
+
+    def checkDirection(self, playerX):
+        if (self.monster.x + self.dimension[0]/2) < playerX:
+            self.direction = "right"
+        else:
+            self.direction = "left"
+        self.currentImages = self.imageRun[self.direction]
+    
+    def moviment(self):
+        if self.direction == "right":
+            self.monster.left += self.velocity
+        else:
+            self.monster.left -= self.velocity
+    
+    def moveRight(self, velocity):
+        self.monster.left += velocity - self.velocity
+    def moveLeft(self, velocity):
+        self.monster.left -= velocity - self.velocity
 
 class Cloud:
     def __init__(self):
@@ -178,6 +240,8 @@ class Scene:
 
         self.btnHome = Button("gui_btn_home", (25, 25), (WIDTH-25, 0))
 
+        self.monsters = [Monster(WIDTH, 250)]
+
     def groundManage(self):
         for ground in self.grounds:
             ground.LeftOutTheScreen()
@@ -186,16 +250,20 @@ class Scene:
         # Remover os blocos que saíram da tela
         self.grounds = [ground for ground in self.grounds if not ground.canBeRemoved]
 
-        self.moveGrounds()
         self.createGround()
 
-    def moveGrounds(self):
+    def moveObjectsByPlayerMoviment(self):
         if self.player.goingToLeft():
             for ground in self.grounds:
                 ground.moveRight()
+            for monster in self.monsters:
+                monster.moveRight(self.player.velocity)
+                
         if self.player.goingToRight():
             for ground in self.grounds:
                 ground.moveLeft()
+            for monster in self.monsters:
+                monster.moveLeft(self.player.velocity)
 
     def createGround(self):
         # Pega a posição do último e do primeiro bloco de chão existentes
@@ -233,6 +301,8 @@ class Scene:
         screen.blit(self.mountains, (0,0))
         screen.blit(self.layer, (0, 0))
         self.groundManage()
+        self.monstersManage()
+        self.moveObjectsByPlayerMoviment()
         self.player.draw()
         self.btnHome.draw()
     
@@ -245,6 +315,11 @@ class Scene:
         if self.btnHome.buttonCollid(x,y):
             musicManager.play()
             gameStart = False
+    
+    def monstersManage(self):
+        for monster in self.monsters:
+            monster.draw()
+            monster.update(self.player.getPosX())
 
 class Button:
     def __init__(self, image:str, dimentions:tuple, pos:tuple, imagePressed:str=""):
@@ -365,7 +440,9 @@ def update():
         elif keyboard.A:
             player.moveLeft()
     
+    
     musicManager.update()
+    
 
 def draw():
     screen.clear()
