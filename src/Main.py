@@ -14,10 +14,10 @@ class Player:
         self.velocity = 3
         self.direction = "right"
         self.spriteSize = (60, 73)
-        self.initialPos = (int(WIDTH/2 - self.spriteSize[0]/2), int(HEIGHT - self.spriteSize[1]*1.5))
+        self.initialPos = (int(WIDTH/2 - self.spriteSize[0]/2), int(HEIGHT - self.spriteSize[1]*1.4))
         self.animation_speed_to_idle = 8
         self.animation_speed_to_run = 4
-        self.animation_speed_to_attack = 3
+        self.animation_speed_to_attack = 5
         self.isWalking = False
         self.isAttacking = False
         self.attackController = 0
@@ -127,6 +127,13 @@ class Player:
     
     def getPosX(self):
         return self.player.x + self.spriteSize[0]//2
+    
+    def getActor(self):
+        return self.player
+    
+    def getDirection(self):
+        return self.direction
+
 
 class Monster:
     def __init__(self, x:int, y:int):
@@ -145,6 +152,7 @@ class Monster:
         self.current_frame = 0
         self.frame_count = 0  
         self.animation_speed = 10  
+        self.timeNearPlayer = 0
 
 
         self.monster = Actor(self.currentImages[self.current_frame], topleft=(self.posx, self.posy))
@@ -183,6 +191,19 @@ class Monster:
     def moveLeft(self, velocity):
         self.monster.left -= velocity - self.velocity
 
+    def isnear(self, player:Player):
+        if 0 <= self.monster.distance_to(player.getActor()) <= 60:
+            self.timeNearPlayer += 1
+            return True
+        self.timeNearPlayer = 0
+        return False
+    
+    def canBeAttacked(self, player:Player):
+        if self.isnear(player) and player.getDirection() != self.direction:
+            return True
+        return False
+
+
 class Cloud:
     def __init__(self):
         self.x = WIDTH
@@ -200,6 +221,7 @@ class Cloud:
             self.canBeRemoved = True
     def draw(self):
         self.cloud.draw()
+
 
 class Ground:
     def __init__(self, groundImage:str, firstGround:bool, posx:int=0):
@@ -224,6 +246,7 @@ class Ground:
 
     def draw(self):
         self.ground.draw()
+
 
 class Scene:
     def __init__(self, player:Player):
@@ -319,16 +342,30 @@ class Scene:
     
     def monstersManage(self):
         self.monsterTick += 1
-        if self.monsterTick >= 120:
+        if self.monsterTick >= 100:
             self.monsterTick = 0
             self.addMonster()
         for monster in self.monsters:
             monster.draw()
             monster.update(self.player.getPosX())
+            self.monsterDamage(monster)
     
     def addMonster(self):
         posx = -50 - randint(0, 100) if randint(0, 1) == 1 else WIDTH + randint(0, 100)
         self.monsters.append(Monster(posx, 250))
+    
+    def monsterDamage(self, monster:Monster):
+        global gameStart
+
+        if monster.canBeAttacked(self.player):
+            if self.player.isAttacking:
+                self.monsters.remove(monster)
+        
+        if monster.isnear(self.player):
+            if monster.timeNearPlayer >= 120:
+                gameStart = False
+                #self.monsters.remove(monster)
+
 
 class Button:
     def __init__(self, image:str, dimentions:tuple, pos:tuple, imagePressed:str=""):
@@ -362,6 +399,7 @@ class Button:
     def setImage(self, image):
         self.button.image = image
 
+
 class Menu:
     def __init__(self):
         self.startButton = Button("gui_btn_play", (50, 50), (WIDTH/2-25, 200), "gui_btn_play_pressed")
@@ -369,13 +407,20 @@ class Menu:
     
     def startGame(self):
         global gameStart
+        global player
+        global scene
+
+        player = Player()
+        scene = Scene(player)
         gameStart = True
 
     def checkClick(self, x, y):
         global musicManager
+
         if self.startButton.buttonCollid(x, y):
             self.startGame()
             musicManager.play()
+
         if self.musicButton.buttonCollid(x, y):
             if musicManager.mutted:
                 musicManager.removeMutted()
@@ -400,6 +445,7 @@ class Menu:
     
     def update(self, x, y):
         self.startButton.buttonSelected(x, y)
+
 
 class MusicManager:
     def __init__(self):
@@ -428,8 +474,6 @@ class MusicManager:
     def removeMutted(self):
         self.mutted = False
         self.play()
-        
-
 
 player = Player()
 scene = Scene(player)
@@ -439,6 +483,9 @@ musicManager = MusicManager()
 
 
 def update():
+    global player
+    global musicManager
+
     if gameStart:
         #Player animation
         player.update()
@@ -451,9 +498,13 @@ def update():
     
     
     musicManager.update()
-    
+
 
 def draw():
+    global scene
+    global menu
+    global gameStart
+
     screen.clear()
     if gameStart:
         scene.showScene()
@@ -461,6 +512,9 @@ def draw():
         menu.draw()
 
 def on_key_up(key):
+    global gameStart
+    global player
+
     if gameStart:
         if key == keys.D or key == keys.A:
             player.toIdle()
@@ -471,6 +525,10 @@ def on_key_down(key):
             player.attack()
 
 def on_mouse_down(pos):
+    global gameStart
+    global menu
+    global scene
+
     x,y = pos
     if not gameStart:
         menu.checkClick(x, y)
@@ -478,12 +536,16 @@ def on_mouse_down(pos):
         scene.checkClick(x,y)
     
 def on_mouse_move(pos):
+    global gameStart
+    global menu
+    global scene
+
     x, y = pos
     if not gameStart:
         menu.update(x, y)
     else:
         scene.update(x,y)
     
-
+    
 # run code
 pg.go()
