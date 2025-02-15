@@ -21,6 +21,7 @@ class Player:
         self.isWalking = False
         self.isAttacking = False
         self.attackController = 0
+        self.points = 0
 
         #sound configuration
         self.soundControllerRun = 0
@@ -133,6 +134,11 @@ class Player:
     
     def getDirection(self):
         return self.direction
+    
+    def getPoints(self):
+        return self.points
+    def addPoint(self):
+        self.points += 1
 
 
 class Monster:
@@ -324,11 +330,13 @@ class Scene:
         self.cloudManage()
         screen.blit(self.mountains, (0,0))
         screen.blit(self.layer, (0, 0))
+        screen.draw.text(str(self.player.getPoints()), (10, 10), color="black", fontsize=40)
         self.groundManage()
         self.monstersManage()
         self.moveObjectsByPlayerMoviment()
         self.player.draw()
         self.btnHome.draw()
+        
     
     def update(self, x, y):
         self.btnHome.buttonSelected(x, y)
@@ -360,11 +368,11 @@ class Scene:
         if monster.canBeAttacked(self.player):
             if self.player.isAttacking:
                 self.monsters.remove(monster)
+                self.player.addPoint()
         
         if monster.isnear(self.player):
             if monster.timeNearPlayer >= 120:
                 gameStart = False
-                #self.monsters.remove(monster)
 
 
 class Button:
