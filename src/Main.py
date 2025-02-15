@@ -240,7 +240,8 @@ class Scene:
 
         self.btnHome = Button("gui_btn_home", (25, 25), (WIDTH-25, 0))
 
-        self.monsters = [Monster(WIDTH, 250)]
+        self.monsters = []
+        self.monsterTick = 0
 
     def groundManage(self):
         for ground in self.grounds:
@@ -317,9 +318,17 @@ class Scene:
             gameStart = False
     
     def monstersManage(self):
+        self.monsterTick += 1
+        if self.monsterTick >= 120:
+            self.monsterTick = 0
+            self.addMonster()
         for monster in self.monsters:
             monster.draw()
             monster.update(self.player.getPosX())
+    
+    def addMonster(self):
+        posx = -50 - randint(0, 100) if randint(0, 1) == 1 else WIDTH + randint(0, 100)
+        self.monsters.append(Monster(posx, 250))
 
 class Button:
     def __init__(self, image:str, dimentions:tuple, pos:tuple, imagePressed:str=""):
