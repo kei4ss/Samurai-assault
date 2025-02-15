@@ -1,7 +1,11 @@
 # Samurai assault
 A pgzero game
 
-![gameImage](documents/gameScreenshot.png)
+<p align="center">
+  <img src="documents/menuScreenshot.png" alt="Imagem 1" width="45%">
+  <img src="documents/gameScreenshot.png" alt="Imagem 2" width="45%">
+</p>
+
 
 ## How to play?
 ### 1️⃣ Install python
