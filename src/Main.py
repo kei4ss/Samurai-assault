@@ -14,7 +14,7 @@ class Player:
         self.velocity = 3
         self.direction = "right"
         self.spriteSize = (60, 73)
-        self.initialPos = (int(WIDTH/2 - self.spriteSize[0]/2), int(HEIGHT - self.spriteSize[1]*1.4))
+        self.initialPos = (WIDTH // 2 - self.spriteSize[0] // 2, HEIGHT - self.spriteSize[1] - 10)
         self.animation_speed_to_idle = 8
         self.animation_speed_to_run = 4
         self.animation_speed_to_attack = 5
@@ -60,10 +60,7 @@ class Player:
 
             if self.isAttacking:
                 if self.current_frame >= len(self.currentImages):  
-                    self.isAttacking = False
-                    self.current_frame = 0
-                    self.frame_count = 0
-                    self.toIdle()
+                    self.endAttack()
                 else:
                     self.player.image = self.currentImages[self.current_frame]
             else:
@@ -79,7 +76,6 @@ class Player:
                 self.soundControllerRun = 0
                 sounds.player_step.play()
 
-
     def attack(self):
         if not self.isAttacking:
             self.isAttacking = True
@@ -88,23 +84,29 @@ class Player:
             self.animation_speed = self.animation_speed_to_attack
             self.currentImages = self.attackImages[self.direction]
             sounds.knife_slice.play()
+    
+    def endAttack(self):
+        self.isAttacking = False
+        self.toIdle()
 
     def draw(self):
         self.player.draw()
 
     def moveRight(self):
-        if not self.isAttacking:  # Impede movimento durante ataque
-            self.direction = "right"
-            self.toRun()
-            if self.player.right < (WIDTH - self.spriteSize[0]/2):
-                self.player.left += self.velocity
+        if self.isAttacking: 
+            return
+        self.direction = "right"
+        self.toRun()
+        if self.player.right < (WIDTH - self.spriteSize[0]/2):
+            self.player.left += self.velocity
     
     def moveLeft(self):
-        if not self.isAttacking:
-            self.direction = "left"
-            self.toRun()
-            if self.player.left > self.spriteSize[0]/2:
-                self.player.left -= self.velocity
+        if self.isAttacking:
+            return
+        self.direction = "left"
+        self.toRun()
+        if self.player.left > self.spriteSize[0]/2:
+            self.player.left -= self.velocity
     
     def toIdle(self):
         self.isWalking = False
@@ -137,6 +139,7 @@ class Player:
     
     def getPoints(self):
         return self.points
+
     def addPoint(self):
         self.points += 1
 
@@ -159,6 +162,7 @@ class Monster:
         self.frame_count = 0  
         self.animation_speed = 10  
         self.timeNearPlayer = 0
+        self.tickToExplosion = 0
 
 
         self.monster = Actor(self.currentImages[self.current_frame], topleft=(self.posx, self.posy))
@@ -167,6 +171,9 @@ class Monster:
         self.checkDirection(playerX)
         self.moviment()
         self.animation()
+        if self.timeNearPlayer >= 120:
+            self.tickToExplosion += 1
+            self.timeNearPlayer = 0
 
     def draw(self):
         self.monster.draw()
@@ -202,6 +209,7 @@ class Monster:
             self.timeNearPlayer += 1
             return True
         self.timeNearPlayer = 0
+        self.tickToExplosion = 0
         return False
     
     def canBeAttacked(self, player:Player):
@@ -335,8 +343,7 @@ class Scene:
         self.monstersManage()
         self.moveObjectsByPlayerMoviment()
         self.player.draw()
-        self.btnHome.draw()
-        
+        self.btnHome.draw()      
     
     def update(self, x, y):
         self.btnHome.buttonSelected(x, y)
@@ -360,7 +367,7 @@ class Scene:
     
     def addMonster(self):
         posx = -50 - randint(0, 100) if randint(0, 1) == 1 else WIDTH + randint(0, 100)
-        self.monsters.append(Monster(posx, 250))
+        self.monsters.append(Monster(posx, 270))
     
     def monsterDamage(self, monster:Monster):
         global gameStart
@@ -371,7 +378,8 @@ class Scene:
                 self.player.addPoint()
         
         if monster.isnear(self.player):
-            if monster.timeNearPlayer >= 120:
+            screen.draw.text(str(monster.tickToExplosion), (monster.monster.x, monster.monster.y-20), color="black", fontsize=20)
+            if monster.tickToExplosion >= 4:
                 gameStart = False
 
 
@@ -499,10 +507,11 @@ def update():
         player.update()
 
         #Player moviment
-        if keyboard.D:
-            player.moveRight()
-        elif keyboard.A:
-            player.moveLeft()
+        if not player.isAttacking:
+            if keyboard.D:
+                player.moveRight()
+            elif keyboard.A:
+                player.moveLeft()
     
     
     musicManager.update()
