@@ -70,20 +70,22 @@ class Player:
         self.soundRun()
                 
     def soundRun(self):
+        global soundsManager
         if self.isWalking:
             self.soundControllerRun += 1
             if self.soundControllerRun >= 15:
                 self.soundControllerRun = 0
-                sounds.player_step.play()
+                soundsManager.soundPlayerRun()
 
     def attack(self):
+        global soundsManager
         if not self.isAttacking:
             self.isAttacking = True
             self.current_frame = 0
             self.frame_count = 0
             self.animation_speed = self.animation_speed_to_attack
             self.currentImages = self.attackImages[self.direction]
-            sounds.knife_slice.play()
+            soundsManager.soundPlayerAttack()
     
     def endAttack(self):
         self.isAttacking = False
@@ -357,7 +359,7 @@ class Scene:
     
     def monstersManage(self):
         self.monsterTick += 1
-        if self.monsterTick >= 100:
+        if self.monsterTick >= 100 - self.player.points:
             self.monsterTick = 0
             self.addMonster()
         for monster in self.monsters:
@@ -420,6 +422,7 @@ class Menu:
     def __init__(self):
         self.startButton = Button("gui_btn_play", (50, 50), (WIDTH/2-25, 200), "gui_btn_play_pressed")
         self.musicButton = Button("gui_btn_music", (40, 40), (WIDTH-40, HEIGHT-40))
+        self.soundButton = Button("gui_btn_sound", (40, 40), (WIDTH-90, HEIGHT-40))
     
     def startGame(self):
         global gameStart
@@ -432,6 +435,7 @@ class Menu:
 
     def checkClick(self, x, y):
         global musicManager
+        global soundsManager
 
         if self.startButton.buttonCollid(x, y):
             self.startGame()
@@ -444,6 +448,14 @@ class Menu:
             else:
                 musicManager.activeMutted()
                 self.musicButton.setImage("gui_btn_music_mutted")
+        
+        if self.soundButton.buttonCollid(x, y):
+            if soundsManager.isMutted():
+                soundsManager.disableMutted()
+                self.soundButton.setImage("gui_btn_sound")
+            else:
+                soundsManager.activeMutted()
+                self.soundButton.setImage("gui_btn_sound_mutted")
 
 
     def draw(self):
@@ -458,6 +470,7 @@ class Menu:
         screen.blit("gui_logo", (155, 120))
         self.startButton.draw()
         self.musicButton.draw()
+        self.soundButton.draw()
     
     def update(self, x, y):
         self.startButton.buttonSelected(x, y)
@@ -491,11 +504,30 @@ class MusicManager:
         self.mutted = False
         self.play()
 
+class SoundsManager:
+    def __init__(self):
+        self.mutted = False
+    
+    def soundPlayerRun(self):
+        if not self.mutted:
+            sounds.player_step.play()
+    def soundPlayerAttack(self):
+        if not self.mutted:
+            sounds.knife_slice.play()
+    def activeMutted(self):
+        self.mutted = True
+    def disableMutted(self):
+        self.mutted = False
+    def isMutted(self):
+        return self.mutted
+
+
 player = Player()
 scene = Scene(player)
 menu = Menu()
 gameStart = False
 musicManager = MusicManager()
+soundsManager = SoundsManager()
 
 
 def update():
