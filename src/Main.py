@@ -22,6 +22,7 @@ class Player:
         self.isAttacking = False
         self.attackController = 0
         self.points = 0
+        self.isAlive = True
 
         #sound configuration
         self.soundControllerRun = 0
@@ -336,6 +337,7 @@ class Scene:
             self.clouds.append(Cloud()) if randint(0, 1) == 1 and len(self.clouds) < 5 else ...
             
     def showScene(self):
+        global gameStart
         screen.blit(self.sky, (0, 0))
         self.cloudManage()
         screen.blit(self.mountains, (0,0))
@@ -345,7 +347,10 @@ class Scene:
         self.monstersManage()
         self.moveObjectsByPlayerMoviment()
         self.player.draw()
-        self.btnHome.draw()      
+        self.btnHome.draw()  
+
+        if not self.isPlayerAlive():
+            gameStart = False    
     
     def update(self, x, y):
         self.btnHome.buttonSelected(x, y)
@@ -373,16 +378,21 @@ class Scene:
     
     def monsterDamage(self, monster:Monster):
         global gameStart
+        global soundsManager
 
         if monster.canBeAttacked(self.player):
             if self.player.isAttacking:
                 self.monsters.remove(monster)
+                soundsManager.soundMonsterDeath()
                 self.player.addPoint()
         
         if monster.isnear(self.player):
             screen.draw.text(str(monster.tickToExplosion), (monster.monster.x, monster.monster.y-20), color="black", fontsize=20)
             if monster.tickToExplosion >= 4:
-                gameStart = False
+                self.player.isAlive = False
+
+    def isPlayerAlive(self):
+        return self.player.isAlive
 
 
 class Button:
@@ -478,7 +488,7 @@ class Menu:
 
 class MusicManager:
     def __init__(self):
-        self.musics = ["danger", "rebels_be"]
+        self.musics = ["danger", "rebels_be", "courtesan", "ostrich"]
         self.mutted = False
         self.currentMusic = self.choiceRandomMusic()
         self.play()
@@ -504,6 +514,7 @@ class MusicManager:
         self.mutted = False
         self.play()
 
+
 class SoundsManager:
     def __init__(self):
         self.mutted = False
@@ -514,12 +525,17 @@ class SoundsManager:
     def soundPlayerAttack(self):
         if not self.mutted:
             sounds.knife_slice.play()
+
     def activeMutted(self):
         self.mutted = True
     def disableMutted(self):
         self.mutted = False
     def isMutted(self):
         return self.mutted
+
+    def soundMonsterDeath(self):
+        if not self.mutted:
+            sounds.creature_death.play()
 
 
 player = Player()
@@ -547,7 +563,6 @@ def update():
     
     
     musicManager.update()
-
 
 def draw():
     global scene
