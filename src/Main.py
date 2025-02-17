@@ -7,40 +7,43 @@ from random import choice
 WIDTH = 576
 HEIGHT = 324
 
-# === Characters classes ===
+
 class Player:
     def __init__(self):
-        # Configurações gerais
+        # General configurations
         self.velocity = 3
         self.direction = "right"
         self.spriteSize = (60, 73)
-        self.initialPos = (WIDTH // 2 - self.spriteSize[0] // 2, HEIGHT - self.spriteSize[1] - 10)
+        self.initialPos = (
+            WIDTH // 2 - self.spriteSize[0] // 2, 
+            HEIGHT - self.spriteSize[1] - 10
+        )
+        self.isWalking = False
+        self.isAttacking = False
+        self.isAlive = True
+        self.points = 0
+
+        # Animation control settings
         self.animation_speed_to_idle = 8
         self.animation_speed_to_run = 4
         self.animation_speed_to_attack = 5
-        self.isWalking = False
-        self.isAttacking = False
-        self.attackController = 0
-        self.points = 0
-        self.isAlive = True
 
-        #sound configuration
+        # Constrollers
+        self.attackController = 0
         self.soundControllerRun = 0
 
-        # Carregar sprites
+        # Load sprite images for different states
         self.runImages = {
-            "right": ["samurai_right_run1", "samurai_right_run2", "samurai_right_run3", "samurai_right_run4", "samurai_right_run5", "samurai_right_run6", "samurai_right_run7"],
-            "left": ["samurai_left_run1", "samurai_left_run2", "samurai_left_run3", "samurai_left_run4", "samurai_left_run5", "samurai_left_run6", "samurai_left_run7"]
+            "right": [f"samurai_right_run{i}" for i in range(1, 8)],
+            "left": [f"samurai_left_run{i}" for i in range(1, 8)]
         }
-        
         self.idleImages = {
-            "right": ["samurai_right_idle1", "samurai_right_idle2", "samurai_right_idle3", "samurai_right_idle4", "samurai_right_idle5"],
-            "left": ["samurai_left_idle1", "samurai_left_idle2", "samurai_left_idle3", "samurai_left_idle4", "samurai_left_idle5"]
+            "right": [f"samurai_right_idle{i}" for i in range(1, 6)],
+            "left": [f"samurai_left_idle{i}" for i in range(1, 6)]
         }
-
         self.attackImages = {
-            "right": ["samurai_right_attack_1", "samurai_right_attack_2", "samurai_right_attack_3", "samurai_right_attack_4"],
-            "left": ["samurai_left_attack_1", "samurai_left_attack_2", "samurai_left_attack_3", "samurai_left_attack_4"]
+            "right": [f"samurai_right_attack_{i}" for i in range(1, 5)],
+            "left": [f"samurai_left_attack_{i}" for i in range(1, 5)]
         }
 
         # Configuração de animação
@@ -55,38 +58,47 @@ class Player:
 
     def update(self):
         self.frame_count += 1
+        
+        # Update animation frame based on animation speed
         if self.frame_count >= self.animation_speed:
             self.frame_count = 0
             self.current_frame += 1
 
             if self.isAttacking:
+                # If attack animation reaches the end, stop attacking
                 if self.current_frame >= len(self.currentImages):  
                     self.endAttack()
                 else:
                     self.player.image = self.currentImages[self.current_frame]
+            # Loop animation frames for idle and running states
             else:
                 self.current_frame %= len(self.currentImages)
                 self.player.image = self.currentImages[self.current_frame]
-            
-        self.soundRun()
+        
+        self.soundRun() # Play running sound effect
                 
     def soundRun(self):
         global soundsManager
+        # Check if the player is walking
         if self.isWalking:
             self.soundControllerRun += 1
-            if self.soundControllerRun >= 15:
+            if self.soundControllerRun >= 15: # Play running sound effect periodically
                 self.soundControllerRun = 0
                 soundsManager.soundPlayerRun()
 
     def attack(self):
         global soundsManager
+        # Check if the player is already attacking
         if not self.isAttacking:
             self.isAttacking = True
             self.current_frame = 0
             self.frame_count = 0
+            
+            # Set attack animation speed and images
             self.animation_speed = self.animation_speed_to_attack
             self.currentImages = self.attackImages[self.direction]
-            soundsManager.soundPlayerAttack()
+            
+            soundsManager.soundPlayerAttack() # Play attack sound
     
     def endAttack(self):
         self.isAttacking = False
@@ -153,20 +165,21 @@ class Monster:
         self.posx = x
         self.posy = y
         self.velocity = 1
-        self.dimension = (32, 32)
-
-        self.imageRun = {
-            "right": ["monster_white_run_right_1", "monster_white_run_right_2", "monster_white_run_right_3", "monster_white_run_right_4", "monster_white_run_right_5", "monster_white_run_right_6"],
-            "left": ["monster_white_run_left_1", "monster_white_run_left_2", "monster_white_run_left_3", "monster_white_run_left_4", "monster_white_run_left_5", "monster_white_run_left_6"]
-        }
-
-        self.currentImages = self.imageRun[self.direction]
-        self.current_frame = 0
-        self.frame_count = 0  
-        self.animation_speed = 10  
         self.timeNearPlayer = 0
         self.tickToExplosion = 0
 
+        # Load images
+        self.dimension = (32, 32) # image dimension
+        self.imageRun = {
+            "right": [f"monster_white_run_right_{i}" for i in range(1, 7)],
+            "left": [f"monster_white_run_left_{i}" for i in range(1, 7)]
+        }
+        self.currentImages = self.imageRun[self.direction]
+
+        ## Animation control settings
+        self.current_frame = 0
+        self.frame_count = 0  
+        self.animation_speed = 10  
 
         self.monster = Actor(self.currentImages[self.current_frame], topleft=(self.posx, self.posy))
 
@@ -547,8 +560,7 @@ soundsManager = SoundsManager()
 
 
 def update():
-    global player
-    global musicManager
+    global player, musicManager
 
     if gameStart:
         #Player animation
@@ -561,13 +573,10 @@ def update():
             elif keyboard.A:
                 player.moveLeft()
     
-    
     musicManager.update()
 
 def draw():
-    global scene
-    global menu
-    global gameStart
+    global scene, menu, gameStart
 
     screen.clear()
     if gameStart:
@@ -576,22 +585,21 @@ def draw():
         menu.draw()
 
 def on_key_up(key):
-    global gameStart
-    global player
+    global gameStart, player
 
     if gameStart:
         if key == keys.D or key == keys.A:
             player.toIdle()
 
 def on_key_down(key):
+    global gameStart
+
     if gameStart:
         if key == keys.E:
             player.attack()
 
 def on_mouse_down(pos):
-    global gameStart
-    global menu
-    global scene
+    global gameStart, menu, scene
 
     x,y = pos
     if not gameStart:
@@ -600,16 +608,13 @@ def on_mouse_down(pos):
         scene.checkClick(x,y)
     
 def on_mouse_move(pos):
-    global gameStart
-    global menu
-    global scene
+    global gameStart, menu, scene
 
     x, y = pos
     if not gameStart:
         menu.update(x, y)
     else:
         scene.update(x,y)
-    
-    
-# run code
-pg.go()
+      
+# Run pgzero code      
+pg.go() 
